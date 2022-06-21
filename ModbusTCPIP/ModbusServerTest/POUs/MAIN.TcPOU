@@ -1,0 +1,188 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.11">
+  <POU Name="MAIN" Id="{9ea0e380-1a7b-4bd1-a863-dcc7ae2702da}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM MAIN
+VAR
+	sIpAddr : STRING[15] := '192.168.001.252';
+	nport : UINT := 502;
+	nUnitID : BYTE := 1;
+	tTimeOut : TIME := T#1S;
+	nOfReg : UINT := 10;
+	nAddr :WORD := 0;
+	
+	fb_MBReadRegister: FB_MBReadRegs;
+	bReadEnable: BOOL;
+	bReadBusyFlag: BOOL;
+	bReadErrorFlag: BOOL;
+	nReadErrorID: UDINT;
+	ireadReg : ARRAY[1..10] OF WORD;
+	
+	n :INT := 0;
+	
+	bWriteBusyFlag: BOOL;
+	bWriteEnable: BOOL;
+	fb_MBWriteRegister: FB_MBWriteRegs;
+	bWriteErrorFlag: BOOL;
+	nWriteErrorID: UDINT;
+	iWriteReg : ARRAY[1..10] OF WORD;
+
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* Version history: 
+Date          | Version    | created under        | Author          | Remark 
+---------------------------------------------------------------------------------------- 
+20/06/2022    | 1.0.0      | V3.1 (Build 4024.29) | Gokul G         | first release 
+	* Basic Modbus TCP/IP Register Read/Write 
+	
+*) 
+(* Modbus TCP/IP Communication  
+1.First Install TF6250 Software in both Target & Enginnering PC Add Tc2_ModbusSrv Library 
+2.In Main Program
+	Variable 
+	sIpAddr : STRING[15] := '192.168.001.252';
+	nport : UINT := 502;
+	nUnitID : BYTE := 1;
+	tTimeOut : TIME := T#1S;
+	nOfReg : UINT := 10;
+	nAddr :WORD := 0;
+	
+	fb_MBReadRegister: FB_MBReadRegs;
+	bReadEnable: BOOL;
+	bReadBusyFlag: BOOL;
+	bReadErrorFlag: BOOL;
+	nReadErrorID: UDINT;
+	ireadReg : ARRAY[1..10] OF WORD;
+	
+	n :INT := 0;
+	
+	bWriteBusyFlag: BOOL;
+	bWriteEnable: BOOL;
+	fb_MBWriteRegister: FB_MBWriteRegs;
+	bWriteErrorFlag: BOOL;
+	nWriteErrorID: UDINT;
+	iWriteReg : ARRAY[1..10] OF WORD;
+	
+	Program 
+	(* For Alternate Read & Write of Register *)
+	IF n >= 100 AND NOT bReadBusyFlag THEN
+		bReadEnable := TRUE;
+	ELSIF n >= 200 AND NOT bWriteBusyFlag THEN
+		bWriteEnable := TRUE;
+		n := 0;
+	END_IF
+	n := n+1;
+
+	(* Read Register *)
+	fb_MBReadRegister(
+		sIPAddr:= sIpAddr, 
+		nTCPPort:= nport,
+		nUnitID:= nUnitID, 
+		nQuantity:= nOfReg , 
+		nMBAddr:= nAddr , 
+		cbLength:= SIZEOF(ireadReg), 
+		pDestAddr:=ADR(ireadReg) , 
+		bExecute:=bReadEnable , 
+		tTimeout:= tTimeOut , 
+		bBusy=> bReadBusyFlag, 
+		bError=> bReadErrorFlag , 
+		nErrId=> nReadErrorID , 
+		cbRead=> );
+	bReadEnable := FALSE;
+	
+	(* Write Register *)
+	fb_MBWriteRegister(
+		sIPAddr:= sIpAddr, 
+		nTCPPort:= nport , 
+		nUnitID:= nUnitID , 
+		nQuantity:= nOfReg, 
+		nMBAddr:= nAddr + 10 , 
+		cbLength:= SIZEOF(iWriteReg), 
+		pSrcAddr:= ADR(iWriteReg), 
+		bExecute:= bWriteEnable, 
+		tTimeout:= tTimeOut, 
+		bBusy=> bWriteBusyFlag, 
+		bError=> bWriteErrorFlag, 
+		nErrId=> nWriteErrorID );	
+	bWriteEnable := FALSE;
+3.Set IP Adress of Servers as per requirement & port should be specified (Usally 502 but it can be changed if multiple modbus servers are there in same IP)
+4.Program will alternately read & write register every 1 secs
+
+Note :
+	If Address in Modscan is 1 then in MBAddress it should be 0 (-1)
+	
+*)
+
+(* For Alternate Read & Write of Register *)
+IF n >= 100 AND NOT bReadBusyFlag THEN
+	bReadEnable := TRUE;
+ELSIF n >= 200 AND NOT bWriteBusyFlag THEN
+	bWriteEnable := TRUE;
+	n := 0;
+END_IF
+n := n+1;
+
+(* Read Register *)
+fb_MBReadRegister(
+	sIPAddr:= sIpAddr, 
+	nTCPPort:= nport,
+	nUnitID:= nUnitID, 
+	nQuantity:= nOfReg , 
+	nMBAddr:= nAddr , 
+	cbLength:= SIZEOF(ireadReg), 
+	pDestAddr:=ADR(ireadReg) , 
+	bExecute:=bReadEnable , 
+	tTimeout:= tTimeOut , 
+	bBusy=> bReadBusyFlag, 
+	bError=> bReadErrorFlag , 
+	nErrId=> nReadErrorID , 
+	cbRead=> );
+bReadEnable := FALSE;
+
+(* Write Register *)
+fb_MBWriteRegister(
+	sIPAddr:= sIpAddr, 
+	nTCPPort:= nport , 
+	nUnitID:= nUnitID , 
+	nQuantity:= nOfReg, 
+	nMBAddr:= nAddr + 10 , 
+	cbLength:= SIZEOF(iWriteReg), 
+	pSrcAddr:= ADR(iWriteReg), 
+	bExecute:= bWriteEnable, 
+	tTimeout:= tTimeOut, 
+	bBusy=> bWriteBusyFlag, 
+	bError=> bWriteErrorFlag, 
+	nErrId=> nWriteErrorID );	
+bWriteEnable := FALSE;]]></ST>
+    </Implementation>
+    <LineIds Name="MAIN">
+      <LineId Id="129" Count="5" />
+      <LineId Id="128" Count="0" />
+      <LineId Id="141" Count="0" />
+      <LineId Id="136" Count="1" />
+      <LineId Id="216" Count="69" />
+      <LineId Id="215" Count="0" />
+      <LineId Id="166" Count="0" />
+      <LineId Id="140" Count="0" />
+      <LineId Id="167" Count="0" />
+      <LineId Id="135" Count="0" />
+      <LineId Id="37" Count="0" />
+      <LineId Id="42" Count="0" />
+      <LineId Id="47" Count="0" />
+      <LineId Id="56" Count="0" />
+      <LineId Id="101" Count="0" />
+      <LineId Id="43" Count="0" />
+      <LineId Id="35" Count="0" />
+      <LineId Id="48" Count="0" />
+      <LineId Id="50" Count="0" />
+      <LineId Id="9" Count="12" />
+      <LineId Id="2" Count="0" />
+      <LineId Id="53" Count="0" />
+      <LineId Id="168" Count="0" />
+      <LineId Id="63" Count="0" />
+      <LineId Id="77" Count="11" />
+      <LineId Id="62" Count="0" />
+      <LineId Id="100" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>
